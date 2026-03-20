@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: conciliador-pro
+    runtime: static
+    buildCommand: npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_GEMINI_API_KEY
+        sync: false
+      - key: VITE_SUPABASE_URL
+        value: https://ykhlxxnfzjpecgpcmzgz.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlraGx4eG5mempwZWNncGNtemd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwMjkxNDcsImV4cCI6MjA4OTYwNTE0N30.bQTSBbWHyz_oLwEmn8GtWaFqggW3s37zvRAgIDg1A5s
