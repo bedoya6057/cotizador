@@ -251,7 +251,20 @@ export default function App() {
       const rawText = result.candidates?.[0]?.content?.parts?.[0]?.text;
       if (!rawText) throw new Error("La IA no devolvió partidas válidas.");
 
-      const aiRes = JSON.parse(rawText.replace(/```json|```/g, "").trim());
+      let aiRes = { matches: [] };
+      try {
+          let cleanText = rawText.replace(/```json|```/gi, "").trim();
+          const firstBrace = cleanText.indexOf('{');
+          const lastBrace = cleanText.lastIndexOf('}');
+          if (firstBrace !== -1 && lastBrace !== -1) {
+              cleanText = cleanText.substring(firstBrace, lastBrace + 1);
+          }
+          aiRes = JSON.parse(cleanText);
+      } catch (parseErr) {
+          addLog(`Error de JSON: ${rawText.substring(0, 60).replace(/\n/g, " ")}...`);
+          console.error("Texto devuelto por la IA que falló el parseo:", rawText);
+          throw new Error("La IA no devolvió un formato técnico JSON válido.");
+      }
       const rawMatches = Array.isArray(aiRes.matches) ? aiRes.matches : [];
 
       const mapped = rawMatches.map((m, i) => {
