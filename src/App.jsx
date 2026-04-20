@@ -145,8 +145,8 @@ export default function App() {
     // Fallback de modelos: Si uno falla, intenta con el siguiente en la lista.
     const fallbackModels = [
       "gemini-2.5-flash",
-      "gemini-1.5-flash",
-      "gemini-1.5-pro"
+      "gemini-flash-latest",
+      "gemini-pro-latest"
     ];
 
     addLog(`Llamando a Gemini (${payload.contents[0].parts[0].text.substring(0, 30)}...)`);
