@@ -137,28 +137,54 @@ export default function App() {
   };
 
   // --- 4. MOTOR DE LÓGICA DE IA ---
-  const callGemini = async (payload) => {
+  const callGemini = async (payload, maxRetries = 3) => {
     if (!GEMINI_API_KEY) {
       throw new Error("Falta la GEMINI_API_KEY. Configúrala al inicio del archivo.");
     }
     // Actualizamos al estándar Gemini 2.5 Flash detectado para este proyecto
     const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
     addLog(`Llamando a Gemini (${payload.contents[0].parts[0].text.substring(0, 30)}...)`);
-    const startTime = Date.now();
-    const response = await fetch(url, { 
-      method: 'POST', 
-      headers: { 'Content-Type': 'application/json' }, 
-      body: JSON.stringify(payload) 
-    });
-    const endTime = Date.now();
-    const duration = (endTime - startTime)/1000;
-    addLog(`Gemini respondió en ${duration}s`);
-    if (!response.ok) {
-        const errData = await response.json().catch(() => ({}));
-        addLog(`Error API: ${response.status} - ${errData.error?.message || 'Error desconocido'}`);
-        throw new Error("Error en la llamada a la API.");
+    
+    let attempt = 0;
+    while (attempt < maxRetries) {
+      const startTime = Date.now();
+      try {
+        const response = await fetch(url, { 
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify(payload) 
+        });
+        const endTime = Date.now();
+        const duration = (endTime - startTime)/1000;
+        
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            const errMsg = errData.error?.message || 'Error desconocido';
+            
+            if (response.status === 503 || response.status === 429 || response.status >= 500) {
+               attempt++;
+               addLog(`Error API ${response.status}. Reintentando (${attempt}/${maxRetries}) en ${attempt * 2}s...`);
+               if (attempt < maxRetries) {
+                 await new Promise(res => setTimeout(res, 2000 * attempt));
+                 continue;
+               }
+            }
+            
+            addLog(`Error API definitivo: ${response.status} - ${errMsg}`);
+            throw new Error("Error en la API: " + errMsg);
+        }
+        
+        addLog(`Gemini respondió en ${duration}s`);
+        return await response.json();
+      } catch (e) {
+        if (e.message.includes("Error en la API") || attempt >= maxRetries - 1) {
+            throw e;
+        }
+        attempt++;
+        addLog(`Fallo de conexión. Reintentando (${attempt}/${maxRetries})...`);
+        await new Promise(res => setTimeout(res, 2000 * attempt));
+      }
     }
-    return await response.json();
   };
 
   const processAnalysis = async (content, feedback = "", existingFicheroItems = []) => {
