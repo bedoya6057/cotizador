@@ -141,12 +141,22 @@ export default function App() {
     if (!GEMINI_API_KEY) {
       throw new Error("Falta la GEMINI_API_KEY. Configúrala al inicio del archivo.");
     }
-    // Actualizamos al estándar Gemini 2.5 Flash detectado para este proyecto
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+    
+    // Fallback de modelos: Si uno falla, intenta con el siguiente en la lista.
+    const fallbackModels = [
+      "gemini-2.5-flash",
+      "gemini-2.0-flash",
+      "gemini-1.5-flash",
+      "gemini-1.5-pro"
+    ];
+
     addLog(`Llamando a Gemini (${payload.contents[0].parts[0].text.substring(0, 30)}...)`);
     
     let attempt = 0;
     while (attempt < maxRetries) {
+      const currentModel = fallbackModels[Math.min(attempt, fallbackModels.length - 1)];
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${GEMINI_API_KEY}`;
+
       const startTime = Date.now();
       try {
         const response = await fetch(url, { 
@@ -163,26 +173,27 @@ export default function App() {
             
             if (response.status === 503 || response.status === 429 || response.status >= 500) {
                attempt++;
-               addLog(`Error API ${response.status}. Reintentando (${attempt}/${maxRetries}) en ${attempt * 2}s...`);
+               addLog(`Error ${response.status} en ${currentModel}. Alternando modelo (${attempt}/${maxRetries})...`);
                if (attempt < maxRetries) {
-                 await new Promise(res => setTimeout(res, 2000 * attempt));
+                 await new Promise(res => setTimeout(res, 1500));
                  continue;
                }
             }
             
-            addLog(`Error API definitivo: ${response.status} - ${errMsg}`);
+            addLog(`Error definitivo en ${currentModel}: ${response.status} - ${errMsg}`);
             throw new Error("Error en la API: " + errMsg);
         }
         
-        addLog(`Gemini respondió en ${duration}s`);
+        addLog(`Gemini (${currentModel}) respondió en ${duration}s`);
         return await response.json();
       } catch (e) {
         if (e.message.includes("Error en la API") || attempt >= maxRetries - 1) {
             throw e;
         }
         attempt++;
-        addLog(`Fallo de conexión. Reintentando (${attempt}/${maxRetries})...`);
-        await new Promise(res => setTimeout(res, 2000 * attempt));
+        const nextModel = fallbackModels[Math.min(attempt, fallbackModels.length - 1)];
+        addLog(`Fallo de conexión. Alternando a ${nextModel} (${attempt}/${maxRetries})...`);
+        await new Promise(res => setTimeout(res, 1500));
       }
     }
   };
