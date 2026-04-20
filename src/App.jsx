@@ -145,7 +145,6 @@ export default function App() {
     // Fallback de modelos: Si uno falla, intenta con el siguiente en la lista.
     const fallbackModels = [
       "gemini-2.5-flash",
-      "gemini-2.0-flash",
       "gemini-1.5-flash",
       "gemini-1.5-pro"
     ];
